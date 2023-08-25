@@ -1847,6 +1847,40 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	}
 }
 
+
+void CMenus::RenderSettingsPerfection(CUIRect MainView)
+{
+	CUIRect Label, Button, Left, Right, LeftLeft;
+	CUIRect Aimbot;
+	CUIRect Weapons;
+
+	// Aimbot
+	MainView.HSplitTop(250.0f, &Aimbot, &MainView);
+
+	Aimbot.HSplitTop(30.0f, &Label, &Aimbot);
+	UI()->DoLabel(&Label, Localize("Perfection"), 20.0f, TEXTALIGN_LEFT);
+	Aimbot.Margin(5.0f, &Aimbot);
+	Left = Aimbot;
+
+	Left.HSplitTop(20.0f, &Button, &Left);
+	if(DoButton_CheckBox(&g_Config.m_PfAimbot, Localize("Aimbot"), g_Config.m_PfAimbot, &Button))
+	{
+		g_Config.m_PfAimbot ^= 1;
+	}
+
+	// Silent Aimbot Checkbox
+	Left.HSplitTop(20.0f, &Button, &Left);
+	if(DoButton_CheckBox(&g_Config.m_PfSilentAimbot, Localize("Silent"), g_Config.m_PfSilentAimbot, &Button))
+	{
+		g_Config.m_PfSilentAimbot ^= 1;
+	}
+}
+
+
+
+
+
+
 void CMenus::RenderSettingsSound(CUIRect MainView)
 {
 	static int s_SndEnable = g_Config.m_SndEnable;
@@ -2010,7 +2044,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 		Localize("Graphics"),
 		Localize("Sound"),
 		Localize("DDNet"),
-		Localize("Assets")};
+		Localize("Assets"),
+		Localize("Perfection")};
 	static CButtonContainer s_aTabButtons[SETTINGS_LENGTH];
 
 	for(int i = 0; i < SETTINGS_LENGTH; i++)
@@ -2072,6 +2107,11 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		m_pBackground->ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
 		RenderSettingsCustom(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_PERFECTION)
+	{
+		m_pBackground->ChangePosition(CMenuBackground::POS_SETTINGS_PERFECTION);
+		RenderSettingsPerfection(MainView);
 	}
 
 	if(m_NeedRestartUpdate)

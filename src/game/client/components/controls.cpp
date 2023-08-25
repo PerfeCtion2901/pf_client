@@ -194,6 +194,50 @@ void CControls::OnMessage(int Msg, void *pRawMsg)
 	}
 }
 
+vec2 CControls::GetNearestCharacterPos()
+{
+	vec2 MyPos = m_pClient->m_LocalCharacterPos;
+	vec2 NearestPos = vec2(0, 0);
+	float NearestDist = 1e10; // start with a very big number
+
+	// Get the hook length based on whether you're on main or dummy
+	float hookLength = m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength;
+
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(i == m_pClient->m_Snap.m_LocalClientID) // skip the local player
+			continue;
+
+		// Skip inactive clients
+		if(!m_pClient->m_aClients[i].m_Active)
+			continue;
+
+		vec2 CharPos = m_pClient->m_aClients[i].m_Predicted.m_Pos;
+		float Dist = distance(MyPos, CharPos);
+
+		// Check if the character is within hook range
+		if(Dist > hookLength)
+			continue;
+
+		// Additional checks to see if we can hook the character
+		// For example, checking for obstacles between the player and the target
+		// If there's an obstacle, you might want to skip this target
+		// if(ThereIsAnObstacleBetween(MyPos, CharPos))
+		//     continue;
+
+		if(Dist < NearestDist)
+		{
+			NearestDist = Dist;
+			NearestPos = CharPos;
+		}
+	}
+
+	return NearestPos;
+}
+
+
+
+
 int CControls::SnapInput(int *pData)
 {
 	static int64_t LastSendTime = 0;
@@ -295,6 +339,39 @@ int CControls::SnapInput(int *pData)
 			m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)(std::cos(t * 3) * 100.0f);
 		}
 #endif
+
+
+// Check if aimbot is enabled
+		if(g_Config.m_PfAimbot)
+		{
+			// Aim at the nearest character
+			vec2 NearestCharPos = GetNearestCharacterPos();
+			if(length(NearestCharPos) > 0) // if we found a character
+			{
+				vec2 MyPos = m_pClient->m_LocalCharacterPos;
+				int dontMatter = 0;
+				// Check for collisions
+				if(m_pClient->Collision()->IntersectLineTeleHook(MyPos, NearestCharPos, nullptr, nullptr, &dontMatter) == 0)
+				{
+					if(g_Config.m_PfSilentAimbot == 1) // Check if silent aimbot is enabled
+					{
+						vec2 AimDirection = NearestCharPos - MyPos;
+						vec2 SlightOffset = normalize(AimDirection) * 0.1; // Adjust this value to change the offset magnitude
+						AimDirection += SlightOffset;
+
+						m_aInputData[g_Config.m_ClDummy].m_TargetX = AimDirection.x;
+						m_aInputData[g_Config.m_ClDummy].m_TargetY = AimDirection.y;
+					}
+					else
+					{
+						m_aMousePos[g_Config.m_ClDummy] = NearestCharPos - MyPos;
+					}
+				}
+			}
+		}
+
+
+
 
 		// check if we need to send input
 		if(m_aInputData[g_Config.m_ClDummy].m_Direction != m_aLastData[g_Config.m_ClDummy].m_Direction)
@@ -407,6 +484,8 @@ bool CControls::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 	ClampMousePos();
 	return true;
 }
+
+
 
 void CControls::ClampMousePos()
 {
